@@ -82,7 +82,7 @@ def test_open_hx_client():
         assert len(pt_grid.rows) == 1
 
     with pytest.raises(HTTPError) as e:
-        HaxallClient._create(URI, auth_token).about()
+        HaxallClient(URI, auth_token).about()
 
     assert e.value.status == 403
 
