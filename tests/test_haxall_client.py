@@ -412,10 +412,11 @@ def test_eval(client: HaxallClient):
 
 
 def test_file_post_using_txt_file(client: HaxallClient):
-    remote_file_uri = "/proj/demo/io/phable-file-test.txt"
+    # remote_file_uri = "/proj/demo/io/phable-file-test.txt"
+    remote_file_uri = "/io/phable-file-test.txt"
 
     with open("tests/phable-file-test.txt", "rb") as file:
-        res_data = client.file_post(file, remote_file_uri)
+        res_data = client.file_post(file, f"{URI}{remote_file_uri}")
 
     assert ".txt" in str(res_data["uri"])
     assert remote_file_uri.replace(".txt", "") in str(res_data["uri"])
