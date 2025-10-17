@@ -1,0 +1,50 @@
+name:createDemoRecs
+func
+src:
+    () => do
+        clearAll()
+        createSites()
+        createEquips()
+        createPoints()
+    end
+---
+name:clearAll
+func
+src:
+    () => do
+        readAll(point or equip or site).each(rec=> diff(rec, null, {remove}).commit() )
+    end
+---
+name:createSites
+func
+src:
+    () => do
+        allSites: ["Carytown", "Headquarters"]
+        allSites.each(s=> do
+            diff(null, {site, dis: s, geoState: "VA"}, {add}).commit()
+        end)
+    end
+---
+name:createEquips
+func
+src:
+    () => do
+        equips: [
+            {navName: "AHU-1", siteName: "Carytown", ahu, equip},
+            {navName: "AHU-2", siteName: "Carytown", ahu, equip},
+            {navName: "HWP-1", siteName: "Headquarters", pump, equip},
+            {navName: "HWP-2", siteName: "Headquarters", pump, equip},
+        ]
+        equips.each(eqp=> diff(null, eqp.set("siteRef", read(site and dis == eqp["siteName"])->id), {add}).commit() )
+    end
+---
+name: createPoints
+func
+src:
+    () => do
+        points: [
+            {navName: "Temp-Sensor", temp, sensor, point, his},
+            {navName: "Temp-Setpt", temp, sp, point, his}
+        ]
+        readAll(equip).each(eqp=> points.each(pt=> diff(null, pt.set("equipRef", eqp->id), {add}).commit()))
+    end
