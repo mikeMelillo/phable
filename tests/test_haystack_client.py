@@ -19,8 +19,9 @@ from phable import (
     open_haystack_client,
 )
 
-# Note:  These tests are made using SkySpark as the Haystack server
-URI = "http://localhost:8080/api/demo"
+# Note:  Converting these tests to run with a Haxall demo project
+# No training proj name is included because Haxall is single tenancy /api vs api/demo
+URI = "http://localhost:8080/api"
 USERNAME = "su"
 PASSWORD = "su"
 
@@ -82,10 +83,17 @@ def test_open():
 
 
 def test_auth_token(client: HaystackClient):
+    client = HaystackClient.open(URI, USERNAME, PASSWORD)
+    product = client.about()["productName"]
+    auth_header = ""
+    if product == "Haxall":
+        auth_header = "s-"
+    else:
+        auth_header = "web-"
     auth_token = client._auth_token
 
     assert len(auth_token) > 40
-    assert "web-" in auth_token
+    assert auth_header in auth_token
 
 
 def test_open_client():

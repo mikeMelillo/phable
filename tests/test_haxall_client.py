@@ -58,15 +58,21 @@ def test_about_op_with_trailing_uri_slash_using_context():
 
 
 def test_open_hx_client():
-    uri = "http://localhost:8080/api/demo"
-    username = "su"
-    password = "su"
+    # uri = "http://localhost:8080/api/demo"
+    # username = "su"
+    # password = "su"
 
-    with open_haxall_client(uri, username, password) as hc:
+    with open_haxall_client(URI, USERNAME, PASSWORD) as hc:
         auth_token = hc._auth_token
+        product = hc.about()["productName"]
+        auth_header = ""
+        if product == "Haxall":
+            auth_header = "s-"
+        else:
+            auth_header = "web-"
 
         assert len(auth_token) > 40
-        assert "web-" in auth_token
+        assert auth_header in auth_token
         assert hc.about()["vendorName"] == "SkyFoundry"
 
         auth_token = hc._auth_token
@@ -76,7 +82,7 @@ def test_open_hx_client():
         assert len(pt_grid.rows) == 1
 
     with pytest.raises(HTTPError) as e:
-        HaxallClient._create(uri, auth_token).about()
+        HaxallClient._create(URI, auth_token).about()
 
     assert e.value.status == 403
 
