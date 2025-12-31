@@ -280,94 +280,132 @@ class Grid:
         return Grid(meta=grid_meta, cols=cols, rows=normalized_rows)
 
     def to_pandas(self):
-        """Converts rows in the `Grid` to a Pandas DataFrame.
+        """Converts time-series `Grid` to a long-format Pandas DataFrame.
 
-        Requires Phable's optional Pandas dependency to be installed.
+        **Note:** This method is experimental and subject to change.
 
-        For Grids with rows that do not have history data, Phable defined data types
-        are passed as the `data` input to the DataFrame.
+        **Requirements:**
+        - Phable's optional Pandas dependency must be installed.
+        - `Grid` must have history data (`hisStart` in Grid metadata that is timezone-aware).
+        - Grid column metadata must have a `kind` tag with a value of `Bool`, `Str`, or `Number`.
+        - Grid row value types must match the `kind` defined in Grid column metadata (e.g., `bool` for
+          `Bool`, `str` for `Str`, `Number` for `Number`). `NA` is valid for all kinds.
+        - Row timestamps must use the same timezone as `hisStart` in Grid metadata.
+        - `Number` values must have a `unit` that matches the Grid column metadata's `unit` (both can be `None`).
 
-        For Grids with rows that have history data, an opinionated mashing process is
-        applied to data passed to the DataFrame's `data` input:
+        When converting to a long-format DataFrame, history data for one or more points are combined into columns.
+        Values are split into typed columns (`val_bool`, `val_str`, `val_num`) to use native DataFrame types for
+        performance, since different points may have different value types. All value columns are always present for
+        schema consistency to enable predictable programmatic access.
 
-         - Phable's `NA` objects are converted to `None`
-         - Missing column values are converted to `None`
-         - `Number` objects are converted to unitless `float` values
+        For each DataFrame row: if the Grid value is Project Haystack's `NA`, the `na` column is `True` and all typed
+        value columns are `None`. Otherwise, `na` is `False` and exactly one typed value column is populated based on
+        type: `val_bool` for `bool`, `val_str` for `str`, or `val_num` for `Number`. The `unit` column is populated
+        only for `Number` values that include a unit.
 
-        The resultant Pandas DataFrame's data types are converted to the `pyarrow` data
-        format.
+        | Column     | Pandas Type                  | Nullable | Description                                   |
+        |------------|------------------------------|----------|-----------------------------------------------|
+        | `ts`       | `timestamp[us, tz][pyarrow]` | No       | Timestamp of the reading                      |
+        | `id`       | `string[pyarrow]`            | No       | Point identifier                              |
+        | `dis`      | `string[pyarrow]`            | Yes      | Display name from column metadata             |
+        | `val_bool` | `bool[pyarrow]`              | Yes      | Boolean value (when `kind` tag is `Bool`)     |
+        | `val_str`  | `string[pyarrow]`            | Yes      | String value (when `kind` tag is `Str`)       |
+        | `val_num`  | `double[pyarrow]`            | Yes      | Numeric value (when `kind` tag is `Number`)   |
+        | `unit`     | `string[pyarrow]`            | Yes      | Unit of measurement (when `val_num` has unit) |
+        | `na`       | `bool[pyarrow]`              | No       | `True` when value is Project Haystack's `NA`  |
 
-        **Notes:**
+        The resultant DataFrame is sorted by `id` and `ts`.
 
-         - This method is experimental and subject to change.
-         - This method assumes all `Number` objects in a given column has the same unit.
-
-        **Example:**
-
-        ```python
-        from datetime import datetime, timedelta
-
-        from phable import Grid, Number
-
-        ts_now = datetime.now()
-        data = [
-            {"ts": ts_now - timedelta(minutes=30), "val": Number(30, "kW")},
-            {"ts": ts_now, "val": Number(38, "kW")},
-        ]
-        data = Grid.to_grid(data)
-        df = data.to_pandas()
-        ```
+        Raises:
+            ValueError:
+                If `Grid` does not have `hisStart` in metadata, `hisStart` is not timezone-aware,
+                row timestamps have a different timezone than `hisStart`, columns are missing required `id`
+                metadata of type Ref, `Number` values have units that don't match column metadata, or
+                values are unsupported types.
         """
         import pandas as pd
+        import pyarrow as pa
 
-        data = _get_data_for_df(self)
-        df = pd.DataFrame(data=data).convert_dtypes(dtype_backend="pyarrow")
+        tz, data = _structure_long_format_for_df(self)
 
-        return df
+        schema = pa.schema(
+            [
+                ("ts", pa.timestamp("us", tz=tz.key)),
+                ("id", pa.string()),
+                ("dis", pa.string()),
+                ("val_bool", pa.bool_()),
+                ("val_str", pa.string()),
+                ("val_num", pa.float64()),
+                ("unit", pa.string()),
+                ("na", pa.bool_()),
+            ]
+        )
+
+        table = pa.Table.from_pylist(data, schema=schema)
+        df = table.to_pandas(types_mapper=pd.ArrowDtype)
+
+        return df.sort_values(["id", "ts"]).reset_index(drop=True)
 
     def to_polars(self):
-        """Converts rows in the `Grid` to a Polars DataFrame.
+        """Converts time-series `Grid` to a long-format Polars DataFrame.
 
-        Requires Phable's optional Polars dependency to be installed.
+        **Note:** This method is experimental and subject to change.
 
-        For Grids with rows that do not have history data, Phable defined data types
-        are passed as the `data` input to the DataFrame.
+        **Requirements:**
+        - Phable's optional Polars dependency must be installed.
+        - `Grid` must have history data (`hisStart` in Grid metadata that is timezone-aware).
+        - Grid column metadata must have a `kind` tag with a value of `Bool`, `Str`, or `Number`.
+        - Grid row value types must match the `kind` defined in Grid column metadata (e.g., `bool` for
+          `Bool`, `str` for `Str`, `Number` for `Number`). `NA` is valid for all kinds.
+        - Row timestamps must use the same timezone as `hisStart` in Grid metadata.
+        - `Number` values must have a `unit` that matches the Grid column metadata's `unit` (both can be `None`).
 
-        For Grids with rows that have history data, an opinionated mashing process is
-        applied to data passed to the DataFrame's `data` input:
+        When converting to a long-format DataFrame, history data for one or more points are combined into columns.
+        Values are split into typed columns (`val_bool`, `val_str`, `val_num`) to use native DataFrame types for
+        performance, since different points may have different value types. All value columns are always present for
+        schema consistency to enable predictable programmatic access.
 
-         - Phable's `NA` objects are converted to `None`
-         - Missing column values are converted to `None`
-         - `Number` objects are converted to unitless `float` values
+        For each DataFrame row: if the Grid value is Project Haystack's `NA`, the `na` column is `True` and all typed
+        value columns are `None`. Otherwise, `na` is `False` and exactly one typed value column is populated based on
+        type: `val_bool` for `bool`, `val_str` for `str`, or `val_num` for `Number`. The `unit` column is populated
+        only for `Number` values that include a unit.
 
-        **Notes:**
+        | Column     | Polars Type        | Nullable | Description                                   |
+        |------------|--------------------|----------|-----------------------------------------------|
+        | `ts`       | `Datetime[us, tz]` | No       | Timestamp of the reading                      |
+        | `id`       | `String`           | No       | Point identifier                              |
+        | `dis`      | `String`           | Yes      | Display name from column metadata             |
+        | `val_bool` | `Boolean`          | Yes      | Boolean value (when `kind` tag is `Bool`)     |
+        | `val_str`  | `String`           | Yes      | String value (when `kind` tag is `Str`)       |
+        | `val_num`  | `Float64`          | Yes      | Numeric value (when `kind` tag is `Number`)   |
+        | `unit`     | `String`           | Yes      | Unit of measurement (when `val_num` has unit) |
+        | `na`       | `Boolean`          | No       | `True` when value is Project Haystack's `NA`  |
 
-         - This method is experimental and subject to change.
-         - This method assumes all `Number` objects in a given column has the same unit.
+        The resultant DataFrame is sorted by `id` and `ts`.
 
-        **Example:**
-
-        ```python
-        from datetime import datetime, timedelta
-
-        from phable import Grid, Number
-
-        ts_now = datetime.now()
-        data = [
-            {"ts": ts_now - timedelta(minutes=30), "val": Number(30, "kW")},
-            {"ts": ts_now, "val": Number(38, "kW")},
-        ]
-        data = Grid.to_grid(data)
-        df = data.to_polars()
-        ```
+        Raises:
+            ValueError:
+                If `Grid` does not have `hisStart` in metadata, `hisStart` is not timezone-aware,
+                row timestamps have a different timezone than `hisStart`, columns are missing required `id`
+                metadata of type Ref, `Number` values have units that don't match column metadata, or
+                values are unsupported types.
         """
-
         import polars as pl  # ty: ignore[unresolved-import]
 
-        data = _get_data_for_df(self)
-        df = pl.DataFrame(data=data)
+        tz, data = _structure_long_format_for_df(self)
 
-        return df
+        schema = {
+            "ts": pl.Datetime(time_unit="us", time_zone=tz.key),
+            "id": pl.String,
+            "dis": pl.String,
+            "val_bool": pl.Boolean,
+            "val_str": pl.String,
+            "val_num": pl.Float64,
+            "unit": pl.String,
+            "na": pl.Boolean,
+        }
+
+        return pl.DataFrame(data=data, schema=schema).sort("id", "ts")
 
 
 @dataclass(frozen=True, slots=True)
@@ -462,41 +500,124 @@ def _to_haystack_datetime(x: datetime) -> str:
     return f"{dt} {haystack_tz}"
 
 
-def _get_data_for_df(grid: Grid):
-    if "hisStart" in grid.meta.keys():
-        data = _structure_his_data_for_df(grid)
-    else:
-        data = grid.rows
+def _validate_his_grid_metadata(grid: Grid) -> None:
+    if "hisStart" not in grid.meta:
+        raise ValueError(
+            "Grid must contain time-series data with 'hisStart' in metadata."
+        )
 
-    return data
+    tz = grid.meta["hisStart"].tzinfo
+    if tz is None:
+        raise ValueError("'hisStart' in metadata must be timezone-aware.")
+
+    for col in grid.cols:
+        if col.name == "ts":
+            continue
+
+        if col.meta is None or not isinstance(col.meta.get("id"), Ref):
+            raise ValueError(
+                f"Column '{col.name}' must have metadata with a valid 'id' of type Ref."
+            )
+
+        if col.meta.get("kind") is None:
+            raise ValueError(
+                f"Column '{col.name}' must have metadata with a 'kind' tag."
+            )
 
 
-def _structure_his_data_for_df(grid: Grid) -> dict[str, list[Any]]:
-    col_names = [col.name for col in grid.cols]
-    data = {}
-    for col_name in col_names:
-        data[col_name] = []
+def _structure_long_format_for_df(grid: Grid) -> tuple[ZoneInfo, list[dict[str, Any]]]:
+    _validate_his_grid_metadata(grid)
+    tz = grid.meta["hisStart"].tzinfo
+    rows = []
 
     for row in grid.rows:
-        for col_name in col_names:
-            col_val = row.get(col_name, None)
+        ts = row.get("ts")
 
-            if col_val is None:
-                data[col_name].append(None)
-            elif isinstance(col_val, datetime):
-                data[col_name].append(col_val)
-            elif isinstance(col_val, NA):
-                data[col_name].append(None)
-            elif isinstance(col_val, Number):
-                data[col_name].append(col_val.val)
-            elif isinstance(col_val, bool):
-                data[col_name].append(col_val)
-            elif isinstance(col_val, str):
-                data[col_name].append(col_val)
+        if not isinstance(ts, datetime):
+            raise ValueError(
+                f"Row timestamp must be a datetime object, got {type(ts).__name__}"
+            )
+
+        if ts.tzinfo.key != tz.key:
+            raise ValueError(
+                f"Timestamp timezone mismatch: row timestamp has timezone '{ts.tzinfo.key}' "
+                f"but 'hisStart' has timezone '{tz.key}'. All timestamps must use the same timezone as 'hisStart'."
+            )
+
+        for col in grid.cols:
+            if col.name == "ts":
+                continue
+
+            assert col.meta is not None  # for type checker
+
+            point_id = "@" + col.meta["id"].val
+            point_dis = col.meta.get("dis")
+            expected_unit = col.meta.get("unit")
+            kind = col.meta["kind"]
+
+            raw_val = row.get(col.name)
+
+            if raw_val is None:
+                continue
+
+            type_to_kind = {Number: "Number", bool: "Bool", str: "Str"}
+            actual_kind = type_to_kind.get(type(raw_val))
+
+            if actual_kind and actual_kind != kind:
+                raise ValueError(
+                    f"Type mismatch for column '{col.name}': value is {actual_kind} "
+                    f"but column metadata specifies kind '{kind}'."
+                )
+
+            if isinstance(raw_val, NA):
+                val_bool = None
+                val_str = None
+                val_num = None
+                unit = None
+                na = True
+            elif isinstance(raw_val, Number):
+                if expected_unit != raw_val.unit:
+                    raise ValueError(
+                        f"Unit mismatch for column '{col.name}': value has unit '{raw_val.unit}' "
+                        f"but column metadata specifies unit '{expected_unit}'."
+                    )
+                val_bool = None
+                val_str = None
+                val_num = raw_val.val
+                unit = raw_val.unit
+                na = False
+            elif isinstance(raw_val, bool):
+                val_bool = raw_val
+                val_str = None
+                val_num = None
+                unit = None
+                na = False
+            elif isinstance(raw_val, str):
+                val_bool = None
+                val_str = raw_val
+                val_num = None
+                unit = None
+                na = False
             else:
-                raise ValueError
+                raise ValueError(
+                    f"Unsupported type '{type(raw_val).__name__}' for column '{col.name}'. "
+                    f"Supported types: Number, NA, bool, or str."
+                )
 
-    return data
+            rows.append(
+                {
+                    "ts": ts,
+                    "id": point_id,
+                    "dis": point_dis,
+                    "val_bool": val_bool,
+                    "val_str": val_str,
+                    "val_num": val_num,
+                    "unit": unit,
+                    "na": na,
+                }
+            )
+
+    return tz, rows
 
 
 # TODO: use Python 3.12 type instead of TypeAlias when Python 3.11 is no longer supported

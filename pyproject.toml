@@ -23,6 +23,7 @@ build-backend = "hatchling.build"
 dev = [
     "auto-changelog>=0.6.0",
     "pandas>=2.2.3",
+    "polars>=1.34.0",
     "pyarrow>=17.0.0,<18",
     "pytest>=8.3.5",
     "ruff>=0.11.2",
