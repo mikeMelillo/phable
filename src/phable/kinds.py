@@ -128,10 +128,12 @@ class Ref:
     dis: str | None = None
 
     def __str__(self) -> str:
-        if self.dis is not None:
-            return self.dis
-        else:
-            return f"@{self.val}"
+        x = f"@{self.val}"
+
+        if not self.dis:
+            return x
+
+        return x + f' "{self.dis}"'
 
 
 @dataclass(frozen=True, slots=True)

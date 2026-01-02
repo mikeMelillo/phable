@@ -43,7 +43,7 @@ def create_kw_pt_rec_fn(
         """diff(null, {pytest, point, his, tz: "New_York", writable, """
         """kind: "Number", unit: "kW"}, {add}).commit"""
     )
-    created_pt_ids = []
+    created_pt_ids: list[Ref] = []
 
     def _create_pt_rec() -> Mapping[str, Any]:
         response = client.eval(axon_expr)
@@ -54,7 +54,7 @@ def create_kw_pt_rec_fn(
     yield _create_pt_rec
 
     for pt_id in created_pt_ids:
-        axon_expr = f"readById(@{pt_id}).diff({{trash}}).commit"
+        axon_expr = f"readById(@{pt_id.val}).diff({{trash}}).commit"
         client.eval(axon_expr)
 
 
@@ -237,7 +237,7 @@ def test_his_read_by_ids_with_datetime_range(client: HaystackClient):
 
     # get the his using Date as the range
     datetime_range = DateTimeRange(
-        datetime(2024, 8, 20, 10, 12, 12, tzinfo=ZoneInfo("America/New_York"))
+        datetime(2025, 8, 20, 10, 12, 12, tzinfo=ZoneInfo("America/New_York"))
     )
     his_grid = client.his_read_by_ids(point_ref, datetime_range)
 
@@ -282,7 +282,7 @@ def test_his_read_by_ids_with_datetime_slice(client: HaystackClient):
     point_ref = point_grid["id"]
 
     # get the his using Date as the range
-    start = datetime(2024, 8, 20, 12, 12, 23, tzinfo=ZoneInfo("America/New_York"))
+    start = datetime(2025, 8, 20, 12, 12, 23, tzinfo=ZoneInfo("America/New_York"))
     end = start + timedelta(days=3)
 
     datetime_range = DateTimeRange(start, end)

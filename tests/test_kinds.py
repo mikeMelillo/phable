@@ -118,7 +118,7 @@ def test_na() -> None:
 
 
 @pytest.mark.parametrize(
-    "test_input,expected", [(Ref("foo"), "@foo"), (Ref("foo", "bar"), "bar")]
+    "test_input,expected", [(Ref("foo"), "@foo"), (Ref("foo", "bar"), '@foo "bar"')]
 )
 def test_ref(test_input: Ref, expected: str) -> None:
     assert str(test_input) == expected
