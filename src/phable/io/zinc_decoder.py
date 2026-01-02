@@ -220,9 +220,7 @@ class ZincDecoder(PhDecoder):
                 break
             self._consume(PhToken.COMMA)
 
-        num_cols = gb.num_cols()
-
-        if num_cols == 0:
+        if not gb.col_names:
             raise ValueError("No columns defined")
         self._consume(PhToken.NL)
 
@@ -237,8 +235,9 @@ class ZincDecoder(PhDecoder):
 
             # read cells
             row = {}
+            num_cols = len(gb.col_names)
 
-            for i, col_name in enumerate(gb.col_names()):
+            for i, col_name in enumerate(gb.col_names):
                 if (
                     self._cur == PhToken.COMMA
                     or self._cur == PhToken.NL
@@ -268,7 +267,7 @@ class ZincDecoder(PhDecoder):
             self._consume()
         if nested:
             self._consume(PhToken.GT2)
-        return gb.to_grid()
+        return gb.build()
 
     def _check_version(self, s: str) -> int:
         if s == "3.0":

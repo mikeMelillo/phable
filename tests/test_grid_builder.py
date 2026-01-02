@@ -9,7 +9,7 @@ def test_gb_his_items_zero_val_cols():
     gb.add_col("ts")
     gb.add_row({})
 
-    assert gb.to_grid() == Grid({"ver": "3.0"}, [GridCol("ts")], [{}])
+    assert gb.build() == Grid({"ver": "3.0"}, [GridCol("ts")], [{}])
 
 
 def test_gb_his_items_one_val_cols():
@@ -20,7 +20,7 @@ def test_gb_his_items_one_val_cols():
     gb.add_row({"ts": datetime.combine(date(2016, 7, 11), time(0, 15)), "v0": 15})
     gb.add_row({"ts": datetime.combine(date(2016, 7, 11), time(0, 20)), "v0": 20})
 
-    assert gb.to_grid() == Grid(
+    assert gb.build() == Grid(
         {"ver": "3.0"},
         [GridCol("ts"), GridCol("v0")],
         [

@@ -24,3 +24,6 @@ from phable.kinds import (
 )
 from phable.xeto_cli import XetoCLI
 from phable.auth.scram import AuthError
+
+
+from phable.grid_builder import GridBuilder
