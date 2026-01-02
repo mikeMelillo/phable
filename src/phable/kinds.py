@@ -128,12 +128,7 @@ class Ref:
     dis: str | None = None
 
     def __str__(self) -> str:
-        x = f"@{self.val}"
-
-        if not self.dis:
-            return x
-
-        return x + f' "{self.dis}"'
+        return self.val
 
 
 @dataclass(frozen=True, slots=True)
@@ -305,16 +300,16 @@ class Grid:
         type: `val_bool` for `bool`, `val_str` for `str`, or `val_num` for `Number`. The `unit` column is populated
         only for `Number` values that include a unit.
 
-        | Column     | Pandas Type                  | Nullable | Description                                   |
-        |------------|------------------------------|----------|-----------------------------------------------|
-        | `ts`       | `timestamp[us, tz][pyarrow]` | No       | Timestamp of the reading                      |
-        | `id`       | `string[pyarrow]`            | No       | Point identifier                              |
-        | `dis`      | `string[pyarrow]`            | Yes      | Display name from column metadata             |
-        | `val_bool` | `bool[pyarrow]`              | Yes      | Boolean value (when `kind` tag is `Bool`)     |
-        | `val_str`  | `string[pyarrow]`            | Yes      | String value (when `kind` tag is `Str`)       |
-        | `val_num`  | `double[pyarrow]`            | Yes      | Numeric value (when `kind` tag is `Number`)   |
-        | `unit`     | `string[pyarrow]`            | Yes      | Unit of measurement (when `val_num` has unit) |
-        | `na`       | `bool[pyarrow]`              | No       | `True` when value is Project Haystack's `NA`  |
+        | Column     | Pandas Type                  | Nullable | Description                                    |
+        |------------|------------------------------|----------|------------------------------------------------|
+        | `ts`       | `timestamp[us, tz][pyarrow]` | No       | Timestamp of the reading                       |
+        | `id`       | `string[pyarrow]`            | No       | Point identifier from Ref (without `@` prefix) |
+        | `dis`      | `string[pyarrow]`            | Yes      | Point display name from Ref                    |
+        | `val_bool` | `bool[pyarrow]`              | Yes      | Boolean value (when `kind` tag is `Bool`)      |
+        | `val_str`  | `string[pyarrow]`            | Yes      | String value (when `kind` tag is `Str`)        |
+        | `val_num`  | `double[pyarrow]`            | Yes      | Numeric value (when `kind` tag is `Number`)    |
+        | `unit`     | `string[pyarrow]`            | Yes      | Unit of measurement (when `val_num` has unit)  |
+        | `na`       | `bool[pyarrow]`              | No       | `True` when value is Project Haystack's `NA`   |
 
         The resultant DataFrame is sorted by `id` and `ts`.
 
@@ -372,16 +367,16 @@ class Grid:
         type: `val_bool` for `bool`, `val_str` for `str`, or `val_num` for `Number`. The `unit` column is populated
         only for `Number` values that include a unit.
 
-        | Column     | Polars Type        | Nullable | Description                                   |
-        |------------|--------------------|----------|-----------------------------------------------|
-        | `ts`       | `Datetime[us, tz]` | No       | Timestamp of the reading                      |
-        | `id`       | `String`           | No       | Point identifier                              |
-        | `dis`      | `String`           | Yes      | Display name from column metadata             |
-        | `val_bool` | `Boolean`          | Yes      | Boolean value (when `kind` tag is `Bool`)     |
-        | `val_str`  | `String`           | Yes      | String value (when `kind` tag is `Str`)       |
-        | `val_num`  | `Float64`          | Yes      | Numeric value (when `kind` tag is `Number`)   |
-        | `unit`     | `String`           | Yes      | Unit of measurement (when `val_num` has unit) |
-        | `na`       | `Boolean`          | No       | `True` when value is Project Haystack's `NA`  |
+        | Column     | Polars Type        | Nullable | Description                                    |
+        |------------|--------------------|----------|------------------------------------------------|
+        | `ts`       | `Datetime[us, tz]` | No       | Timestamp of the reading                       |
+        | `id`       | `String`           | No       | Point identifier from Ref (without `@` prefix) |
+        | `dis`      | `String`           | Yes      | Point display name from Ref                    |
+        | `val_bool` | `Boolean`          | Yes      | Boolean value (when `kind` tag is `Bool`)      |
+        | `val_str`  | `String`           | Yes      | String value (when `kind` tag is `Str`)        |
+        | `val_num`  | `Float64`          | Yes      | Numeric value (when `kind` tag is `Number`)    |
+        | `unit`     | `String`           | Yes      | Unit of measurement (when `val_num` has unit)  |
+        | `na`       | `Boolean`          | No       | `True` when value is Project Haystack's `NA`   |
 
         The resultant DataFrame is sorted by `id` and `ts`.
 
@@ -552,7 +547,7 @@ def _structure_long_format_for_df(grid: Grid) -> tuple[ZoneInfo, list[dict[str, 
 
             assert col.meta is not None  # for type checker
 
-            point_id = "@" + col.meta["id"].val
+            point_id = col.meta["id"].val
             point_dis = col.meta["id"].dis
             expected_unit = col.meta.get("unit")
             kind = col.meta["kind"]

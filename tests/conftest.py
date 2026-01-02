@@ -75,7 +75,7 @@ def single_pt_his_table() -> pa.Table:
     data = [
         {
             "ts": TS_NOW - timedelta(seconds=60),
-            "id": "@point1",
+            "id": "point1",
             "dis": "Point 1 description",
             "val_bool": None,
             "val_str": None,
@@ -85,7 +85,7 @@ def single_pt_his_table() -> pa.Table:
         },
         {
             "ts": TS_NOW - timedelta(seconds=30),
-            "id": "@point1",
+            "id": "point1",
             "dis": "Point 1 description",
             "val_bool": None,
             "val_str": None,
@@ -95,7 +95,7 @@ def single_pt_his_table() -> pa.Table:
         },
         {
             "ts": TS_NOW,
-            "id": "@point1",
+            "id": "point1",
             "dis": "Point 1 description",
             "val_bool": None,
             "val_str": None,
@@ -152,7 +152,7 @@ def multi_pt_his_table() -> pa.Table:
     data = [
         {
             "ts": TS_NOW - timedelta(seconds=30),
-            "id": "@point1",
+            "id": "point1",
             "dis": "Power",
             "val_bool": None,
             "val_str": None,
@@ -162,7 +162,7 @@ def multi_pt_his_table() -> pa.Table:
         },
         {
             "ts": TS_NOW,
-            "id": "@point1",
+            "id": "point1",
             "dis": "Power",
             "val_bool": None,
             "val_str": None,
@@ -172,7 +172,7 @@ def multi_pt_his_table() -> pa.Table:
         },
         {
             "ts": TS_NOW - timedelta(seconds=60),
-            "id": "@point2",
+            "id": "point2",
             "dis": "Status",
             "val_bool": None,
             "val_str": "available",
@@ -182,7 +182,7 @@ def multi_pt_his_table() -> pa.Table:
         },
         {
             "ts": TS_NOW,
-            "id": "@point2",
+            "id": "point2",
             "dis": "Status",
             "val_bool": None,
             "val_str": None,
@@ -192,7 +192,7 @@ def multi_pt_his_table() -> pa.Table:
         },
         {
             "ts": TS_NOW - timedelta(seconds=60),
-            "id": "@point3",
+            "id": "point3",
             "dis": None,
             "val_bool": True,
             "val_str": None,
@@ -202,7 +202,7 @@ def multi_pt_his_table() -> pa.Table:
         },
         {
             "ts": TS_NOW - timedelta(seconds=30),
-            "id": "@point3",
+            "id": "point3",
             "dis": None,
             "val_bool": False,
             "val_str": None,
