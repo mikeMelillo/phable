@@ -553,7 +553,7 @@ def _structure_long_format_for_df(grid: Grid) -> tuple[ZoneInfo, list[dict[str, 
             assert col.meta is not None  # for type checker
 
             point_id = "@" + col.meta["id"].val
-            point_dis = col.meta.get("dis")
+            point_dis = col.meta["id"].dis
             expected_unit = col.meta.get("unit")
             kind = col.meta["kind"]
 

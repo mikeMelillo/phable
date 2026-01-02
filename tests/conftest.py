@@ -76,7 +76,7 @@ def single_pt_his_table() -> pa.Table:
         {
             "ts": TS_NOW - timedelta(seconds=60),
             "id": "@point1",
-            "dis": None,
+            "dis": "Point 1 description",
             "val_bool": None,
             "val_str": None,
             "val_num": None,
@@ -86,7 +86,7 @@ def single_pt_his_table() -> pa.Table:
         {
             "ts": TS_NOW - timedelta(seconds=30),
             "id": "@point1",
-            "dis": None,
+            "dis": "Point 1 description",
             "val_bool": None,
             "val_str": None,
             "val_num": 72.2,
@@ -96,7 +96,7 @@ def single_pt_his_table() -> pa.Table:
         {
             "ts": TS_NOW,
             "id": "@point1",
-            "dis": None,
+            "dis": "Point 1 description",
             "val_bool": None,
             "val_str": None,
             "val_num": 76.3,
@@ -119,8 +119,8 @@ def multi_pt_his_grid() -> Grid:
 
     cols = [
         GridCol("ts"),
-        GridCol("v0", {"id": Ref("point1"), "unit": "kW", "kind": "Number"}),
-        GridCol("v1", {"id": Ref("point2"), "kind": "Str"}),
+        GridCol("v0", {"id": Ref("point1", "Power"), "unit": "kW", "kind": "Number"}),
+        GridCol("v1", {"id": Ref("point2", "Status"), "kind": "Str"}),
         GridCol("v2", {"id": Ref("point3"), "kind": "Bool"}),
     ]
     rows = [
@@ -153,7 +153,7 @@ def multi_pt_his_table() -> pa.Table:
         {
             "ts": TS_NOW - timedelta(seconds=30),
             "id": "@point1",
-            "dis": None,
+            "dis": "Power",
             "val_bool": None,
             "val_str": None,
             "val_num": None,
@@ -163,7 +163,7 @@ def multi_pt_his_table() -> pa.Table:
         {
             "ts": TS_NOW,
             "id": "@point1",
-            "dis": None,
+            "dis": "Power",
             "val_bool": None,
             "val_str": None,
             "val_num": 76.3,
@@ -173,7 +173,7 @@ def multi_pt_his_table() -> pa.Table:
         {
             "ts": TS_NOW - timedelta(seconds=60),
             "id": "@point2",
-            "dis": None,
+            "dis": "Status",
             "val_bool": None,
             "val_str": "available",
             "val_num": None,
@@ -183,7 +183,7 @@ def multi_pt_his_table() -> pa.Table:
         {
             "ts": TS_NOW,
             "id": "@point2",
-            "dis": None,
+            "dis": "Status",
             "val_bool": None,
             "val_str": None,
             "val_num": None,
