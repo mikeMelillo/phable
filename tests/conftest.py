@@ -12,7 +12,7 @@ TS_NOW = datetime.now(ZoneInfo("America/New_York"))
 
 EXPECTED_SCHEMA = pa.schema(
     [
-        ("id", pa.string()),
+        ("id", pa.dictionary(pa.int32(), pa.string())),
         ("ts", pa.timestamp("us", tz="America/New_York")),
         ("val_bool", pa.bool_()),
         ("val_str", pa.string()),

@@ -25,11 +25,19 @@ class DataFrameAdapter:
     get_ts_timezone: Callable[[Any], str]
 
 
-# Registry of dataframe adapters
+def _pandas_from_arrow(table):
+    df = table.to_pandas(types_mapper=pd.ArrowDtype)
+    unique_ids = sorted(df["id"].unique())
+    df["id"] = df["id"].astype(
+        pd.CategoricalDtype(categories=unique_ids, ordered=False)
+    )
+    return df
+
+
 DF_ADAPTERS: dict[str, DataFrameAdapter] = {
     "pandas": DataFrameAdapter(
         to_df=lambda grid: grid.to_pandas(),
-        from_arrow=lambda table: table.to_pandas(types_mapper=pd.ArrowDtype),
+        from_arrow=_pandas_from_arrow,
         assert_equal=pandas_assert_frame_equal,
         get_ts_timezone=lambda df: str(df["ts"].dtype.pyarrow_dtype.tz),
     ),

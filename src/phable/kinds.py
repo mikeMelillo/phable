@@ -301,7 +301,7 @@ class Grid:
 
         | Column     | Pandas Type                  | Nullable | Description                                    |
         |------------|------------------------------|----------|------------------------------------------------|
-        | `id`       | `string[pyarrow]`            | No       | Point identifier from Ref (without `@` prefix) |
+        | `id`       | `Categorical`                | No       | Point identifier from Ref (without `@` prefix) |
         | `ts`       | `timestamp[us, tz][pyarrow]` | No       | Timestamp of the reading                       |
         | `val_bool` | `bool[pyarrow]`              | Yes      | Boolean value (when `kind` tag is `Bool`)      |
         | `val_str`  | `string[pyarrow]`            | Yes      | String value (when `kind` tag is `Str`)        |
@@ -324,7 +324,7 @@ class Grid:
 
         schema = pa.schema(
             [
-                ("id", pa.string()),
+                ("id", pa.dictionary(pa.int32(), pa.string())),
                 ("ts", pa.timestamp("us", tz=tz.key)),
                 ("val_bool", pa.bool_()),
                 ("val_str", pa.string()),
@@ -335,6 +335,11 @@ class Grid:
 
         table = pa.Table.from_pylist(data, schema=schema)
         df = table.to_pandas(types_mapper=pd.ArrowDtype)
+
+        unique_ids = sorted(df["id"].unique())
+        df["id"] = df["id"].astype(
+            pd.CategoricalDtype(categories=unique_ids, ordered=False)
+        )
 
         return df.sort_values(["id", "ts"]).reset_index(drop=True)
 
@@ -363,7 +368,7 @@ class Grid:
 
         | Column     | Polars Type        | Nullable | Description                                    |
         |------------|--------------------|----------|------------------------------------------------|
-        | `id`       | `String`           | No       | Point identifier from Ref (without `@` prefix) |
+        | `id`       | `Categorical`      | No       | Point identifier from Ref (without `@` prefix) |
         | `ts`       | `Datetime[us, tz]` | No       | Timestamp of the reading                       |
         | `val_bool` | `Boolean`          | Yes      | Boolean value (when `kind` tag is `Bool`)      |
         | `val_str`  | `String`           | Yes      | String value (when `kind` tag is `Str`)        |
@@ -384,7 +389,7 @@ class Grid:
         tz, data = _structure_long_format_for_df(self)
 
         schema = {
-            "id": pl.String,
+            "id": pl.Categorical,
             "ts": pl.Datetime(time_unit="us", time_zone=tz.key),
             "val_bool": pl.Boolean,
             "val_str": pl.String,
