@@ -40,16 +40,12 @@ The original list-of-dictionaries approach had several issues:
 
 ```python
 # Before (v0.1.25)
-grid.cols = [
-    {"name": "temp", "meta": {...}},
-    {"name": "humidity", "meta": {...}}
-]
+for col in grid.cols:
+    print(col["name"], col["meta"])
 
 # After (v0.1.26)
-grid.cols = [
-    GridCol("temp", {...}),
-    GridCol("humidity", {...})
-]
+for col in grid.cols:
+    print(col.name, col.meta)
 ```
 
 This change:
@@ -179,7 +175,7 @@ grid = Grid(
 # After
 grid = (
     GridBuilder()
-    .add_meta("dis", "Temperature Data")
+    .set_meta({"dis": "Temperature Data"})
     .add_col("ts")
     .add_col("val", meta={"unit": "°F"})
     .add_row({"ts": datetime(...), "val": Number(72.5, "°F")})

@@ -31,7 +31,7 @@ class GridBuilder:
         return [col.name for col in self._cols]
 
     def set_meta(self, meta: Mapping[str, Any]) -> Self:
-        """Sets grid-level metadata.
+        """Set or update grid-level metadata.
 
         Parameters:
             meta: Metadata dictionary to merge with existing grid metadata.
@@ -69,7 +69,7 @@ class GridBuilder:
         return self
 
     def set_col_meta(self, col_name: str, meta: Mapping[str, Any]) -> Self:
-        """Sets or updates metadata for an existing column.
+        """Set or update metadata for an existing column.
 
         Parameters:
             col_name: Name of the column to update.
