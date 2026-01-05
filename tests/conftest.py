@@ -12,8 +12,8 @@ TS_NOW = datetime.now(ZoneInfo("America/New_York"))
 
 EXPECTED_SCHEMA = pa.schema(
     [
-        ("ts", pa.timestamp("us", tz="America/New_York")),
         ("id", pa.string()),
+        ("ts", pa.timestamp("us", tz="America/New_York")),
         ("val_bool", pa.bool_()),
         ("val_str", pa.string()),
         ("val_num", pa.float64()),
@@ -72,24 +72,24 @@ def single_pt_his_grid() -> Grid:
 def single_pt_his_table() -> pa.Table:
     data = [
         {
-            "ts": TS_NOW - timedelta(seconds=60),
             "id": "point1",
+            "ts": TS_NOW - timedelta(seconds=60),
             "val_bool": None,
             "val_str": None,
             "val_num": None,
             "na": True,
         },
         {
-            "ts": TS_NOW - timedelta(seconds=30),
             "id": "point1",
+            "ts": TS_NOW - timedelta(seconds=30),
             "val_bool": None,
             "val_str": None,
             "val_num": 72.2,
             "na": False,
         },
         {
-            "ts": TS_NOW,
             "id": "point1",
+            "ts": TS_NOW,
             "val_bool": None,
             "val_str": None,
             "val_num": 76.3,
@@ -143,48 +143,48 @@ def multi_pt_his_grid() -> Grid:
 def multi_pt_his_table() -> pa.Table:
     data = [
         {
-            "ts": TS_NOW - timedelta(seconds=30),
             "id": "point1",
+            "ts": TS_NOW - timedelta(seconds=30),
             "val_bool": None,
             "val_str": None,
             "val_num": None,
             "na": True,
         },
         {
-            "ts": TS_NOW,
             "id": "point1",
+            "ts": TS_NOW,
             "val_bool": None,
             "val_str": None,
             "val_num": 76.3,
             "na": False,
         },
         {
-            "ts": TS_NOW - timedelta(seconds=60),
             "id": "point2",
+            "ts": TS_NOW - timedelta(seconds=60),
             "val_bool": None,
             "val_str": "available",
             "val_num": None,
             "na": False,
         },
         {
-            "ts": TS_NOW,
             "id": "point2",
+            "ts": TS_NOW,
             "val_bool": None,
             "val_str": None,
             "val_num": None,
             "na": True,
         },
         {
-            "ts": TS_NOW - timedelta(seconds=60),
             "id": "point3",
+            "ts": TS_NOW - timedelta(seconds=60),
             "val_bool": True,
             "val_str": None,
             "val_num": None,
             "na": False,
         },
         {
-            "ts": TS_NOW - timedelta(seconds=30),
             "id": "point3",
+            "ts": TS_NOW - timedelta(seconds=30),
             "val_bool": False,
             "val_str": None,
             "val_num": None,

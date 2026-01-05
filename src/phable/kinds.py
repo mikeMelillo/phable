@@ -301,8 +301,8 @@ class Grid:
 
         | Column     | Pandas Type                  | Nullable | Description                                    |
         |------------|------------------------------|----------|------------------------------------------------|
-        | `ts`       | `timestamp[us, tz][pyarrow]` | No       | Timestamp of the reading                       |
         | `id`       | `string[pyarrow]`            | No       | Point identifier from Ref (without `@` prefix) |
+        | `ts`       | `timestamp[us, tz][pyarrow]` | No       | Timestamp of the reading                       |
         | `val_bool` | `bool[pyarrow]`              | Yes      | Boolean value (when `kind` tag is `Bool`)      |
         | `val_str`  | `string[pyarrow]`            | Yes      | String value (when `kind` tag is `Str`)        |
         | `val_num`  | `double[pyarrow]`            | Yes      | Numeric value (when `kind` tag is `Number`)    |
@@ -324,8 +324,8 @@ class Grid:
 
         schema = pa.schema(
             [
-                ("ts", pa.timestamp("us", tz=tz.key)),
                 ("id", pa.string()),
+                ("ts", pa.timestamp("us", tz=tz.key)),
                 ("val_bool", pa.bool_()),
                 ("val_str", pa.string()),
                 ("val_num", pa.float64()),
@@ -363,8 +363,8 @@ class Grid:
 
         | Column     | Polars Type        | Nullable | Description                                    |
         |------------|--------------------|----------|------------------------------------------------|
-        | `ts`       | `Datetime[us, tz]` | No       | Timestamp of the reading                       |
         | `id`       | `String`           | No       | Point identifier from Ref (without `@` prefix) |
+        | `ts`       | `Datetime[us, tz]` | No       | Timestamp of the reading                       |
         | `val_bool` | `Boolean`          | Yes      | Boolean value (when `kind` tag is `Bool`)      |
         | `val_str`  | `String`           | Yes      | String value (when `kind` tag is `Str`)        |
         | `val_num`  | `Float64`          | Yes      | Numeric value (when `kind` tag is `Number`)    |
@@ -384,8 +384,8 @@ class Grid:
         tz, data = _structure_long_format_for_df(self)
 
         schema = {
-            "ts": pl.Datetime(time_unit="us", time_zone=tz.key),
             "id": pl.String,
+            "ts": pl.Datetime(time_unit="us", time_zone=tz.key),
             "val_bool": pl.Boolean,
             "val_str": pl.String,
             "val_num": pl.Float64,
@@ -588,8 +588,8 @@ def _structure_long_format_for_df(grid: Grid) -> tuple[ZoneInfo, list[dict[str, 
 
             rows.append(
                 {
-                    "ts": ts,
                     "id": point_id,
+                    "ts": ts,
                     "val_bool": val_bool,
                     "val_str": val_str,
                     "val_num": val_num,

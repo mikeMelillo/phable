@@ -99,14 +99,14 @@ column_metadata = {
 
 The same three sensors, now in long format:
 
-| ts                  | id     | val_bool | val_str | val_num | na    |
-|---------------------|--------|----------|---------|---------|-------|
-| 2024-01-01T00:00:00 | point1 | null     | null    | 72.5    | False |
-| 2024-01-01T01:00:00 | point1 | null     | null    | 73.1    | False |
-| 2024-01-01T00:00:00 | point2 | null     | null    | 68.2    | False |
-| 2024-01-01T01:00:00 | point2 | null     | null    | 68.5    | False |
-| 2024-01-01T00:00:00 | point3 | null     | null    | 70.1    | False |
-| 2024-01-01T01:00:00 | point3 | null     | null    | 70.3    | False |
+| id     | ts                  | val_bool | val_str | val_num | na    |
+|--------|---------------------|----------|---------|---------|-------|
+| point1 | 2024-01-01T00:00:00 | null     | null    | 72.5    | False |
+| point1 | 2024-01-01T01:00:00 | null     | null    | 73.1    | False |
+| point2 | 2024-01-01T00:00:00 | null     | null    | 68.2    | False |
+| point2 | 2024-01-01T01:00:00 | null     | null    | 68.5    | False |
+| point3 | 2024-01-01T00:00:00 | null     | null    | 70.1    | False |
+| point3 | 2024-01-01T01:00:00 | null     | null    | 70.3    | False |
 
 This format combines both history data and point IDs in a single, self-contained DataFrame.
 
