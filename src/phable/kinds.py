@@ -297,18 +297,15 @@ class Grid:
 
         For each DataFrame row: if the Grid value is Project Haystack's `NA`, the `na` column is `True` and all typed
         value columns are `None`. Otherwise, `na` is `False` and exactly one typed value column is populated based on
-        type: `val_bool` for `bool`, `val_str` for `str`, or `val_num` for `Number`. The `unit` column is populated
-        only for `Number` values that include a unit.
+        type: `val_bool` for `bool`, `val_str` for `str`, or `val_num` for `Number`.
 
         | Column     | Pandas Type                  | Nullable | Description                                    |
         |------------|------------------------------|----------|------------------------------------------------|
         | `ts`       | `timestamp[us, tz][pyarrow]` | No       | Timestamp of the reading                       |
         | `id`       | `string[pyarrow]`            | No       | Point identifier from Ref (without `@` prefix) |
-        | `dis`      | `string[pyarrow]`            | Yes      | Point display name from Ref                    |
         | `val_bool` | `bool[pyarrow]`              | Yes      | Boolean value (when `kind` tag is `Bool`)      |
         | `val_str`  | `string[pyarrow]`            | Yes      | String value (when `kind` tag is `Str`)        |
         | `val_num`  | `double[pyarrow]`            | Yes      | Numeric value (when `kind` tag is `Number`)    |
-        | `unit`     | `string[pyarrow]`            | Yes      | Unit of measurement (when `val_num` has unit)  |
         | `na`       | `bool[pyarrow]`              | No       | `True` when value is Project Haystack's `NA`   |
 
         The resultant DataFrame is sorted by `id` and `ts`.
@@ -329,11 +326,9 @@ class Grid:
             [
                 ("ts", pa.timestamp("us", tz=tz.key)),
                 ("id", pa.string()),
-                ("dis", pa.string()),
                 ("val_bool", pa.bool_()),
                 ("val_str", pa.string()),
                 ("val_num", pa.float64()),
-                ("unit", pa.string()),
                 ("na", pa.bool_()),
             ]
         )
@@ -364,18 +359,15 @@ class Grid:
 
         For each DataFrame row: if the Grid value is Project Haystack's `NA`, the `na` column is `True` and all typed
         value columns are `None`. Otherwise, `na` is `False` and exactly one typed value column is populated based on
-        type: `val_bool` for `bool`, `val_str` for `str`, or `val_num` for `Number`. The `unit` column is populated
-        only for `Number` values that include a unit.
+        type: `val_bool` for `bool`, `val_str` for `str`, or `val_num` for `Number`.
 
         | Column     | Polars Type        | Nullable | Description                                    |
         |------------|--------------------|----------|------------------------------------------------|
         | `ts`       | `Datetime[us, tz]` | No       | Timestamp of the reading                       |
         | `id`       | `String`           | No       | Point identifier from Ref (without `@` prefix) |
-        | `dis`      | `String`           | Yes      | Point display name from Ref                    |
         | `val_bool` | `Boolean`          | Yes      | Boolean value (when `kind` tag is `Bool`)      |
         | `val_str`  | `String`           | Yes      | String value (when `kind` tag is `Str`)        |
         | `val_num`  | `Float64`          | Yes      | Numeric value (when `kind` tag is `Number`)    |
-        | `unit`     | `String`           | Yes      | Unit of measurement (when `val_num` has unit)  |
         | `na`       | `Boolean`          | No       | `True` when value is Project Haystack's `NA`   |
 
         The resultant DataFrame is sorted by `id` and `ts`.
@@ -394,11 +386,9 @@ class Grid:
         schema = {
             "ts": pl.Datetime(time_unit="us", time_zone=tz.key),
             "id": pl.String,
-            "dis": pl.String,
             "val_bool": pl.Boolean,
             "val_str": pl.String,
             "val_num": pl.Float64,
-            "unit": pl.String,
             "na": pl.Boolean,
         }
 
@@ -548,7 +538,6 @@ def _structure_long_format_for_df(grid: Grid) -> tuple[ZoneInfo, list[dict[str, 
             assert col.meta is not None  # for type checker
 
             point_id = col.meta["id"].val
-            point_dis = col.meta["id"].dis
             expected_unit = col.meta.get("unit")
             kind = col.meta["kind"]
 
@@ -570,7 +559,6 @@ def _structure_long_format_for_df(grid: Grid) -> tuple[ZoneInfo, list[dict[str, 
                 val_bool = None
                 val_str = None
                 val_num = None
-                unit = None
                 na = True
             elif isinstance(raw_val, Number):
                 if expected_unit != raw_val.unit:
@@ -581,19 +569,16 @@ def _structure_long_format_for_df(grid: Grid) -> tuple[ZoneInfo, list[dict[str, 
                 val_bool = None
                 val_str = None
                 val_num = raw_val.val
-                unit = raw_val.unit
                 na = False
             elif isinstance(raw_val, bool):
                 val_bool = raw_val
                 val_str = None
                 val_num = None
-                unit = None
                 na = False
             elif isinstance(raw_val, str):
                 val_bool = None
                 val_str = raw_val
                 val_num = None
-                unit = None
                 na = False
             else:
                 raise ValueError(
@@ -605,11 +590,9 @@ def _structure_long_format_for_df(grid: Grid) -> tuple[ZoneInfo, list[dict[str, 
                 {
                     "ts": ts,
                     "id": point_id,
-                    "dis": point_dis,
                     "val_bool": val_bool,
                     "val_str": val_str,
                     "val_num": val_num,
-                    "unit": unit,
                     "na": na,
                 }
             )

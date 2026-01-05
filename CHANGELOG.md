@@ -73,7 +73,7 @@ Earlier Phable versions converted Number values to DataFrame native numeric type
 
 Long format preserves Project Haystack conventions while using optimal DataFrame types:
 
-- **Column and grid metadata**: Point identifiers and display names from column metadata are transmitted as DataFrame columns (`id`, `dis`), making common metadata easily accessible without separate lookups.
+- **Easy Access to Point ID**: Point identifiers from column metadata are transmitted on each row in the `id` column of the DataFrame.
 - **Not Available (NA)**: Maintains the semantic difference between null values (missing data at unaligned timestamps) and NA (sensor error or unavailable reading). This distinction helps identify time periods where basic interpolation can be confidently used to fill missing data (null) versus periods where data quality is questionable (NA).
 
 **Wide Format (Before):**
@@ -99,16 +99,16 @@ column_metadata = {
 
 The same three sensors, now in long format:
 
-| ts                  | id     | dis          | val_bool | val_str | val_num | unit | na    |
-|---------------------|--------|--------------|----------|---------|---------|------|-------|
-| 2024-01-01T00:00:00 | point1 | Zone 1 Temp  | null     | null    | 72.5    | °F   | False |
-| 2024-01-01T01:00:00 | point1 | Zone 1 Temp  | null     | null    | 73.1    | °F   | False |
-| 2024-01-01T00:00:00 | point2 | Zone 2 Temp  | null     | null    | 68.2    | °F   | False |
-| 2024-01-01T01:00:00 | point2 | Zone 2 Temp  | null     | null    | 68.5    | °F   | False |
-| 2024-01-01T00:00:00 | point3 | Zone 3 Temp  | null     | null    | 70.1    | °F   | False |
-| 2024-01-01T01:00:00 | point3 | Zone 3 Temp  | null     | null    | 70.3    | °F   | False |
+| ts                  | id     | val_bool | val_str | val_num | na    |
+|---------------------|--------|----------|---------|---------|-------|
+| 2024-01-01T00:00:00 | point1 | null     | null    | 72.5    | False |
+| 2024-01-01T01:00:00 | point1 | null     | null    | 73.1    | False |
+| 2024-01-01T00:00:00 | point2 | null     | null    | 68.2    | False |
+| 2024-01-01T01:00:00 | point2 | null     | null    | 68.5    | False |
+| 2024-01-01T00:00:00 | point3 | null     | null    | 70.1    | False |
+| 2024-01-01T01:00:00 | point3 | null     | null    | 70.3    | False |
 
-This format combines both history data and metadata in a single, self-contained DataFrame.
+This format combines both history data and point IDs in a single, self-contained DataFrame.
 
 #### 3. Ref.__str__() Returns ID Only
 
