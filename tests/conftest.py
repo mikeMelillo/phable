@@ -1,12 +1,38 @@
 from __future__ import annotations
 
+from typing import Any, Callable, Generator, Mapping
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
+import random
 import pyarrow as pa
 import pytest
 
-from phable.kinds import NA, Grid, GridCol, Number, Ref
+from phable.kinds import NA, Grid, GridCol, Number, Ref, Marker
+from phable import (
+    HaystackClient,
+    HaxallClient,
+)
+
+_URI = "http://localhost:8080/api/sys"
+_USERNAME = "su"
+_PASSWORD = "su"
+
+
+@pytest.fixture
+def URI() -> str:
+    return _URI
+
+
+@pytest.fixture
+def USERNAME() -> str:
+    return _USERNAME
+
+
+@pytest.fixture
+def PASSWORD() -> str:
+    return _PASSWORD
+
 
 TS_NOW = datetime.now(ZoneInfo("America/New_York"))
 
@@ -20,6 +46,15 @@ EXPECTED_SCHEMA = pa.schema(
         ("na", pa.bool_()),
     ]
 )
+
+
+@pytest.fixture(params=["json", "zinc"], scope="module")
+def client(request) -> Generator[HaystackClient, None, None]:
+    hc = HaxallClient.open(_URI, _USERNAME, _PASSWORD, content_type=request.param)
+
+    yield hc
+
+    hc.close()
 
 
 @pytest.fixture(scope="module")
@@ -47,7 +82,11 @@ def single_pt_his_grid() -> Grid:
         GridCol("ts"),
         GridCol(
             "val",
-            {"id": Ref("point1", "Point 1 description"), "unit": "kW", "kind": "Number"},
+            {
+                "id": Ref("point1", "Point 1 description"),
+                "unit": "kW",
+                "kind": "Number",
+            },
         ),
     ]
     rows = [
@@ -193,3 +232,76 @@ def multi_pt_his_table() -> pa.Table:
     ]
 
     return pa.Table.from_pylist(data, schema=EXPECTED_SCHEMA)
+
+
+@pytest.fixture(scope="module")
+def create_kw_pt_rec_fn(
+    client: HaxallClient,
+) -> Generator[Callable[[], dict[str, Any]], None, None]:
+    axon_expr = (
+        """diff(null, {hisTest, pytest, point, his, tz: "New_York", writable, """
+        """kind: "Number", unit: "kW"}, {add}).commit"""
+    )
+    created_pt_ids: list[Ref] = []
+
+    def _create_pt_rec() -> Mapping[str, Any]:
+        response = client.eval(axon_expr)
+        pt_rec = response.rows[0]
+        created_pt_ids.append(pt_rec["id"])
+        return pt_rec
+
+    yield _create_pt_rec
+
+    for pt_id in created_pt_ids:
+        axon_expr = f"readById(@{pt_id.val}).diff({{trash}}).commit"
+        client.eval(axon_expr)
+
+
+@pytest.fixture(scope="module")
+def point_id_with_his_data(
+    client: HaxallClient, create_kw_pt_rec_fn: Callable[[], dict[str, Any]]
+) -> Generator[tuple[Ref, list[dict[str, Any]]], None, None]:
+    test_pt_rec = create_kw_pt_rec_fn()
+
+    ts_now = datetime.now(ZoneInfo("America/New_York"))
+
+    rows = [
+        {
+            "ts": ts_now - timedelta(seconds=30),
+            "v0": Number(random.randint(70, 80), "kW"),
+        },
+        {
+            "ts": ts_now,
+            "v0": Number(random.randint(70, 80), "kW"),
+        },
+    ]
+
+    client.his_write_by_ids([test_pt_rec["id"]], rows)
+
+    yield (test_pt_rec["id"], rows)
+
+
+@pytest.fixture
+def sample_recs() -> list[dict[str, Any]]:
+    data = [
+        {"dis": "Rec1...", "testing": Marker()},
+        {"dis": "Rec2...", "testing": Marker()},
+    ]
+    return data
+
+
+@pytest.fixture(scope="module")
+def create_pt_that_is_not_removed_fn(
+    client: HaxallClient,
+) -> Generator[Callable[[], dict[str, Any]], None, None]:
+    axon_expr = (
+        """diff(null, {pytest, point, his, tz: "New_York", writable, """
+        """kind: "Number"}, {add}).commit"""
+    )
+
+    def _create_pt():
+        response = client.eval(axon_expr)
+        writable_kw_pt_rec = response.rows[0]
+        return writable_kw_pt_rec
+
+    yield _create_pt

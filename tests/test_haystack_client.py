@@ -1,5 +1,5 @@
 from datetime import date, datetime, timedelta
-from typing import Any, Callable, Generator, Mapping
+from typing import Any, Callable
 from urllib.error import HTTPError, URLError
 from zoneinfo import ZoneInfo
 
@@ -10,7 +10,6 @@ from phable import (
     DateRange,
     DateTimeRange,
     Grid,
-    HaxallClient,
     HaystackClient,
     Marker,
     Number,
@@ -19,51 +18,13 @@ from phable import (
     open_haystack_client,
 )
 
-# Note:  These tests are made using SkySpark as the Haystack server
-URI = "http://localhost:8080/api/demo"
-USERNAME = "su"
-PASSWORD = "su"
-
-
-@pytest.fixture(params=["json", "zinc"], scope="module")
-def client(request) -> Generator[HaystackClient, None, None]:
-    # use HxClient's features to test Client
-    hc = HaxallClient.open(URI, USERNAME, PASSWORD, content_type=request.param)
-
-    yield hc
-
-    hc.close()
-
-
-@pytest.fixture(scope="module")
-def create_kw_pt_rec_fn(
-    client: HaxallClient,
-) -> Generator[Callable[[], dict[str, Any]], None, None]:
-    axon_expr = (
-        """diff(null, {pytest, point, his, tz: "New_York", writable, """
-        """kind: "Number", unit: "kW"}, {add}).commit"""
-    )
-    created_pt_ids: list[Ref] = []
-
-    def _create_pt_rec() -> Mapping[str, Any]:
-        response = client.eval(axon_expr)
-        pt_rec = response.rows[0]
-        created_pt_ids.append(pt_rec["id"])
-        return pt_rec
-
-    yield _create_pt_rec
-
-    for pt_id in created_pt_ids:
-        axon_expr = f"readById(@{pt_id.val}).diff({{trash}}).commit"
-        client.eval(axon_expr)
-
 
 # -----------------------------------------------------------------------------
 # auth tests
 # -----------------------------------------------------------------------------
 
 
-def test_open():
+def test_open(URI: str, USERNAME: str, PASSWORD: str):
     with pytest.raises(AuthError):
         HaystackClient.open(URI, USERNAME, "wrong_password")
 
@@ -85,15 +46,15 @@ def test_auth_token(client: HaystackClient):
     auth_token = client._auth_token
 
     assert len(auth_token) > 40
-    assert "web-" in auth_token
+    assert "s-" in auth_token
 
 
-def test_open_client():
+def test_open_client(URI: str, USERNAME: str, PASSWORD: str):
     with open_haystack_client(URI, USERNAME, PASSWORD) as hc:
         auth_token = hc._auth_token
 
         assert len(auth_token) > 40
-        assert "web-" in auth_token
+        assert "s-" in auth_token
         assert hc.about()["vendorName"] == "SkyFoundry"
 
         auth_token = hc._auth_token
@@ -104,7 +65,7 @@ def test_open_client():
     assert e.value.status == 403
 
 
-def test_close_op():
+def test_close_op(URI: str, USERNAME: str, PASSWORD: str):
     client = HaystackClient.open(URI, USERNAME, PASSWORD)
     assert len(client.close().rows) == 0
 
@@ -118,13 +79,15 @@ def test_about_op(client: HaystackClient):
     assert client.about()["vendorName"] == "SkyFoundry"
 
 
-def test_about_op_with_trailing_uri_slash():
+def test_about_op_with_trailing_uri_slash(URI: str, USERNAME: str, PASSWORD: str):
     client = HaystackClient.open(URI + "/", USERNAME, PASSWORD)
     assert client.about()["vendorName"] == "SkyFoundry"
     client.close()
 
 
-def test_about_op_with_trailing_uri_slash_using_context():
+def test_about_op_with_trailing_uri_slash_using_context(
+    URI: str, USERNAME: str, PASSWORD: str
+):
     with open_haystack_client(URI + "/", USERNAME, PASSWORD) as client:
         assert client.about()["vendorName"] == "SkyFoundry"
 
@@ -184,140 +147,6 @@ def test_read_by_ids(client: HaystackClient):
         client.read_by_ids([Ref("invalid-id1"), Ref("invalid-id2")])
 
 
-def test_his_read_by_id_with_date_range(client: HaystackClient):
-    # find the point id
-    point_grid = client.read(
-        """point and siteRef->dis=="Carytown" and """
-        """equipRef->siteMeter and demand"""
-    )
-    point_ref = point_grid["id"]
-
-    # get the his using Date as the range
-    start = date.today() - timedelta(days=7)
-    his_grid = client.his_read_by_id(point_ref, start)
-
-    # check his_grid
-    cols = [col.name for col in his_grid.cols]
-    assert isinstance(his_grid.rows[0][cols[1]], Number)
-    assert his_grid.rows[0][cols[1]].unit == "kW"
-    assert his_grid.rows[0][cols[1]].val >= 0
-    assert his_grid.rows[0][cols[0]].date() == start
-    assert his_grid.rows[-1][cols[0]].date() == start
-
-
-def test_his_read_by_ids_with_date_range(client: HaystackClient):
-    # find the point ids
-    point_grid = client.read_all("""point and equipRef->siteMeter and demand""")
-    point_ref1 = point_grid.rows[0]["id"]
-    point_ref2 = point_grid.rows[1]["id"]
-
-    # get the his using Date as the range
-    start = date.today() - timedelta(days=7)
-    his_grid = client.his_read_by_ids([point_ref1, point_ref2], start)
-
-    # check his_grid
-    cols = [col.name for col in his_grid.cols]
-    assert isinstance(his_grid.rows[0][cols[1]], Number)
-    assert his_grid.rows[0][cols[1]].unit == "kW"
-    assert his_grid.rows[0][cols[1]].val >= 0
-    assert his_grid.rows[0][cols[0]].date() == start
-    assert his_grid.rows[1][cols[1]].unit == "kW"
-    assert his_grid.rows[1][cols[1]].val >= 0
-    assert his_grid.rows[1][cols[0]].date() == start
-    assert his_grid.rows[-1][cols[0]].date() == start
-
-
-def test_his_read_by_ids_with_datetime_range(client: HaystackClient):
-    # find the point id
-    point_grid = client.read(
-        """point and siteRef->dis=="Carytown" and """
-        """equipRef->siteMeter and demand"""
-    )
-    point_ref = point_grid["id"]
-
-    # get the his using Date as the range
-    datetime_range = DateTimeRange(
-        datetime(2025, 8, 20, 10, 12, 12, tzinfo=ZoneInfo("America/New_York"))
-    )
-    his_grid = client.his_read_by_ids(point_ref, datetime_range)
-
-    # check his_grid
-    cols = [col.name for col in his_grid.cols]
-    assert isinstance(his_grid.rows[0][cols[1]], Number)
-    assert his_grid.rows[0][cols[1]].unit == "kW"
-    assert his_grid.rows[0][cols[1]].val >= 0
-    assert his_grid.rows[0][cols[0]].date() == datetime_range.start.date()
-    assert his_grid.rows[-1][cols[0]].date() == date.today()
-
-
-def test_his_read_by_ids_with_date_slice(client: HaystackClient):
-    # find the point id
-    point_grid = client.read(
-        """point and siteRef->dis=="Carytown" and """
-        """equipRef->siteMeter and demand"""
-    )
-    point_ref = point_grid["id"]
-
-    # get the his using Date as the range
-    start = date.today() - timedelta(days=7)
-    end = date.today()
-    date_range = DateRange(start, end)
-    his_grid = client.his_read_by_ids(point_ref, date_range)
-
-    # check his_grid
-    cols = [col.name for col in his_grid.cols]
-    assert isinstance(his_grid.rows[0][cols[1]], Number)
-    assert his_grid.rows[0][cols[1]].unit == "kW"
-    assert his_grid.rows[0][cols[1]].val >= 0
-    assert his_grid.rows[0][cols[0]].date() == start
-    assert his_grid.rows[-1][cols[0]].date() == end
-
-
-def test_his_read_by_ids_with_datetime_slice(client: HaystackClient):
-    # find the point id
-    point_grid = client.read(
-        """point and siteRef->dis=="Carytown" and """
-        """equipRef->siteMeter and demand"""
-    )
-    point_ref = point_grid["id"]
-
-    # get the his using Date as the range
-    start = datetime(2025, 8, 20, 12, 12, 23, tzinfo=ZoneInfo("America/New_York"))
-    end = start + timedelta(days=3)
-
-    datetime_range = DateTimeRange(start, end)
-
-    his_grid = client.his_read_by_ids(point_ref, datetime_range)
-
-    # check his_grid
-    cols = [col.name for col in his_grid.cols]
-    assert isinstance(his_grid.rows[0][cols[1]], Number)
-    assert his_grid.rows[0][cols[1]].unit == "kW"
-    assert his_grid.rows[0][cols[1]].val >= 0
-    assert his_grid.rows[0][cols[0]].date() == start.date()
-    assert his_grid.rows[-1][cols[0]].date() == end.date()
-
-
-def test_batch_his_read_by_ids(client: HaystackClient):
-    ids = client.read_all("point and demand and equipRef->siteMeter")
-    id1 = ids.rows[0]["id"]
-    id2 = ids.rows[1]["id"]
-    id3 = ids.rows[2]["id"]
-    id4 = ids.rows[3]["id"]
-
-    ids = [id1, id2, id3, id4]
-    his_grid = client.his_read_by_ids(ids, date.today())
-
-    cols = [col.name for col in his_grid.cols]
-    assert isinstance(his_grid.rows[0][cols[0]], datetime)
-    assert isinstance(his_grid.rows[0][cols[1]], Number)
-    assert his_grid.rows[0][cols[1]].unit == "kW"
-    assert his_grid.rows[0][cols[1]].val >= 0
-    assert isinstance(his_grid.rows[0][cols[4]], Number)
-    assert his_grid.rows[0][cols[4]].unit == "kW"
-    assert his_grid.rows[0][cols[4]].val >= 0
-
-
 def test_single_his_write_by_id(
     create_kw_pt_rec_fn: Callable[[], dict[str, Any]], client: HaystackClient
 ):
@@ -340,8 +169,8 @@ def test_single_his_write_by_id(
 
     assert len(response.rows) == 0
 
-    range = date.today()
-    his_grid = client.his_read_by_ids(test_pt_rec["id"], range)
+    date_range = date.today()
+    his_grid = client.his_read_by_ids(test_pt_rec["id"], date_range)
 
     expected_values = [
         (0, 72.2, "kW"),
@@ -353,38 +182,180 @@ def test_single_his_write_by_id(
 
 
 def test_batch_his_write_by_ids(
-    create_kw_pt_rec_fn: Callable[[], dict[str, Any]], client: HaystackClient
+    point_id_with_his_data: tuple[Ref, list[dict[str, Any]]],
+    client: HaystackClient,
 ):
-    test_pt_rec1 = create_kw_pt_rec_fn()
-    test_pt_rec2 = create_kw_pt_rec_fn()
+    test_rec_id_1, data_1 = point_id_with_his_data
+    test_rec_id_2, data_2 = point_id_with_his_data
 
+    date_range = date.today()
+    his_grid = client.his_read_by_ids([test_rec_id_1, test_rec_id_2], date_range)
+
+    for index in range(len(his_grid.rows)):
+        assert his_grid.rows[index]["v0"].val == pytest.approx(data_1[index]["v0"].val)
+        assert his_grid.rows[index]["v0"].unit == pytest.approx(
+            data_1[index]["v0"].unit
+        )
+        assert his_grid.rows[index]["v1"].val == pytest.approx(data_2[index]["v0"].val)
+        assert his_grid.rows[index]["v1"].unit == pytest.approx(
+            data_2[index]["v0"].unit
+        )
+
+
+def test_his_read_by_id_with_date_range(
+    point_id_with_his_data: tuple[Ref, list[dict[str, Any]]],
+    client: HaystackClient,
+):
+    test_rec_id, _ = point_id_with_his_data
+
+    # get the his using Date as the range
+    start = date.today()
+    his_grid = client.his_read_by_id(test_rec_id, start)
+
+    # check his_grid
+    cols = [col.name for col in his_grid.cols]
+    assert isinstance(his_grid.rows[0][cols[1]], Number)
+    assert his_grid.rows[0][cols[1]].unit == "kW"
+    assert his_grid.rows[0][cols[1]].val >= 0
+    assert his_grid.rows[0][cols[0]].date() == start
+    assert his_grid.rows[-1][cols[0]].date() == start
+
+
+def test_his_read_by_ids_with_date_range(
+    point_id_with_his_data: tuple[Ref, list[dict[str, Any]]], client: HaystackClient
+):
+    # find the point ids
+    point_ref1, _ = point_id_with_his_data
+    point_ref2, _ = point_id_with_his_data
+
+    # get the his using Date as the range
+    start = date.today()
+    his_grid = client.his_read_by_ids([point_ref1, point_ref2], start)
+
+    # check his_grid
+    cols = [col.name for col in his_grid.cols]
+    assert isinstance(his_grid.rows[0][cols[1]], Number)
+    assert his_grid.rows[0][cols[1]].unit == "kW"
+    assert his_grid.rows[0][cols[1]].val >= 0
+    assert his_grid.rows[0][cols[0]].date() == start
+    assert his_grid.rows[1][cols[1]].unit == "kW"
+    assert his_grid.rows[1][cols[1]].val >= 0
+    assert his_grid.rows[1][cols[0]].date() == start
+    assert his_grid.rows[-1][cols[0]].date() == start
+
+
+def test_his_read_by_ids_with_datetime_range(
+    point_id_with_his_data: tuple[Ref, list[dict[str, Any]]], client: HaystackClient
+):
+    # find the point ids
+    point_ref, _ = point_id_with_his_data
     ts_now = datetime.now(ZoneInfo("America/New_York"))
 
-    rows = [
-        {
-            "ts": ts_now - timedelta(seconds=30),
-            "v0": Number(72.2, "kW"),
-            "v1": Number(76.3, "kW"),
-        },
-        {"ts": ts_now, "v0": Number(76.3), "v1": Number(72.2)},
-    ]
+    # get the his using Date as the range
+    datetime_range = DateTimeRange(
+        datetime(
+            ts_now.year,
+            ts_now.month,
+            ts_now.day,
+            0,
+            0,
+            0,
+            tzinfo=ZoneInfo("America/New_York"),
+        ),
+        datetime(
+            ts_now.year,
+            ts_now.month,
+            ts_now.day,
+            23,
+            59,
+            59,
+            tzinfo=ZoneInfo("America/New_York"),
+        ),
+    )
+    his_grid = client.his_read_by_ids(point_ref, datetime_range)
 
-    # write the his data to the test pt
-    response = client.his_write_by_ids([test_pt_rec1["id"], test_pt_rec2["id"]], rows)
-    assert len(response.rows) == 0
+    # check his_grid
+    cols = [col.name for col in his_grid.cols]
+    assert isinstance(his_grid.rows[0][cols[1]], Number)
+    assert his_grid.rows[0][cols[1]].unit == "kW"
+    assert his_grid.rows[0][cols[1]].val >= 0
+    assert his_grid.rows[0][cols[0]].date() == datetime_range.start.date()
+    assert his_grid.rows[-1][cols[0]].date() == date.today()
 
-    range = date.today()
-    his_grid = client.his_read_by_ids([test_pt_rec1["id"], test_pt_rec2["id"]], range)
 
-    expected_values = [
-        (0, "v0", 72.2, "kW"),
-        (1, "v0", 76.3, "kW"),
-        (0, "v1", 76.3, "kW"),
-        (1, "v1", 72.2, "kW"),
-    ]
-    for row_idx, col, expected_val, expected_unit in expected_values:
-        assert his_grid.rows[row_idx][col].val == pytest.approx(expected_val)
-        assert his_grid.rows[row_idx][col].unit == expected_unit
+def test_his_read_by_ids_with_date_slice(
+    point_id_with_his_data: tuple[Ref, list[dict[str, Any]]], client: HaystackClient
+):
+    # find the point id
+    point_ref, _ = point_id_with_his_data
+
+    # get the his using Date as the range
+    start = date.today() - timedelta(days=7)
+    end = date.today()
+    date_range = DateRange(start, end)
+    his_grid = client.his_read_by_ids(point_ref, date_range)
+
+    # check his_grid
+    cols = [col.name for col in his_grid.cols]
+    assert isinstance(his_grid.rows[0][cols[1]], Number)
+    assert his_grid.rows[0][cols[1]].unit == "kW"
+    assert his_grid.rows[0][cols[1]].val >= 0
+    assert his_grid.meta["hisStart"].date() == start
+    # hisEnd on a his read always goes to midnight of the end date which resolves as tomorrow in date()
+    assert his_grid.meta["hisEnd"].date() == end + timedelta(days=1)
+
+
+def test_his_read_by_ids_with_datetime_slice(
+    point_id_with_his_data: tuple[Ref, list[dict[str, Any]]], client: HaystackClient
+):
+    # find the point id
+    point_ref, _ = point_id_with_his_data
+
+    # get the his using Date as the range
+    ts_now = datetime.now(ZoneInfo("America/New_York"))
+    date_now = datetime(
+        ts_now.year,
+        ts_now.month,
+        ts_now.day,
+        0,
+        0,
+        0,
+        tzinfo=ZoneInfo("America/New_York"),
+    )
+    start = date_now - timedelta(days=3)
+    end = date_now + timedelta(hours=23, minutes=59, seconds=59)
+
+    datetime_range = DateTimeRange(start, end)
+
+    his_grid = client.his_read_by_ids(point_ref, datetime_range)
+
+    # check his_grid
+    cols = [col.name for col in his_grid.cols]
+    assert isinstance(his_grid.rows[0][cols[1]], Number)
+    assert his_grid.rows[0][cols[1]].unit == "kW"
+    assert his_grid.rows[0][cols[1]].val >= 0
+    assert his_grid.meta["hisStart"].date() == start.date()
+    assert his_grid.meta["hisEnd"].date() == end.date()
+
+
+def test_batch_his_read_by_ids(
+    point_id_with_his_data: tuple[Ref, list[dict[str, Any]]], client: HaystackClient
+):
+    ids = []
+    for _ in range(4):
+        new_id, _ = point_id_with_his_data
+        ids.append(new_id)
+
+    his_grid = client.his_read_by_ids(ids, date.today())
+
+    cols = [col.name for col in his_grid.cols]
+    assert isinstance(his_grid.rows[0][cols[0]], datetime)
+    assert isinstance(his_grid.rows[0][cols[1]], Number)
+    assert his_grid.rows[0][cols[1]].unit == "kW"
+    assert his_grid.rows[0][cols[1]].val >= 0
+    assert isinstance(his_grid.rows[0][cols[4]], Number)
+    assert his_grid.rows[0][cols[4]].unit == "kW"
+    assert his_grid.rows[0][cols[4]].val >= 0
 
 
 def test_point_write_number(

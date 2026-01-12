@@ -17,56 +17,137 @@ from phable import (
     open_haxall_client,
 )
 
-from .test_haystack_client import client, create_kw_pt_rec_fn, URI, USERNAME, PASSWORD
-
-
-@pytest.fixture
-def sample_recs() -> list[dict[str, Any]]:
+@pytest.mark.order(0)
+@pytest.mark.parametrize("client", ["json"], indirect=True)
+def test_configure_proj(client: HaxallClient):
     data = [
-        {"dis": "Rec1...", "testing": Marker()},
-        {"dis": "Rec2...", "testing": Marker()},
+        {
+            "id": Ref("ph-001"),
+            "site": Marker(),
+            "pytest": Marker(),
+            "dis": "Carytown",
+            "geoState": "VA",
+        },
+        {
+            "id": Ref("ph-002"),
+            "siteRef": Ref("ph-001"),
+            "equip": Marker(),
+            "pytest": Marker(),
+            "siteMeter": Marker(),
+            "dis": "Elec-Meter-01",
+            "elec": Marker(),
+            "meter": Marker(),
+        },
+        {
+            "id": Ref("ph-003"),
+            "siteRef": Ref("ph-001"),
+            "equipRef": Ref("ph-002"),
+            "point": Marker(),
+            "pytest": Marker(),
+            "his": Marker(),
+            "demand": Marker(),
+            "navName": "kW",
+            "kind": "Number",
+            "unit": "kW",
+            "tz": "New_York",
+        },
+        {
+            "id": Ref("ph-004"),
+            "siteRef": Ref("ph-001"),
+            "equipRef": Ref("ph-002"),
+            "point": Marker(),
+            "pytest": Marker(),
+            "his": Marker(),
+            "demand": Marker(),
+            "navName": "kW",
+            "kind": "Number",
+            "unit": "kW",
+            "tz": "New_York",
+        },
     ]
-    return data
+
+    try:
+        client.commit_add(data)
+    except CallError as e:
+        if "Rec already exists" in e.help_msg.meta["errTrace"]:
+            print("Previous test records still in database, clearing then re-adding")
+            clear_test_data(client)
+            client.commit_add(data)
+        else:
+            raise e
+
+    try:
+        client.eval('libAdd("hx.point")')
+    except CallError as e:
+        if "Lib already enabled: hx.point" not in e.help_msg.meta["errTrace"]:
+            raise e
+
+    point_count = client.eval("readCount(point and pytest)").rows[0]["val"].val
+    equip_count = client.eval("readCount(equip and pytest)").rows[0]["val"].val
+    site_count = client.eval("readCount(site and pytest)").rows[0]["val"].val
+
+    if point_count != 2:
+        raise ValueError(
+            f"Unexpected number of pytest points in database. {point_count} != 2"
+        )
+    if equip_count != 1:
+        raise ValueError(
+            f"Unexpected number of pytest equips in database. {equip_count} != 1"
+        )
+    if site_count != 1:
+        raise ValueError(
+            f"Unexpected number of pytest sites in database. {site_count} != 1"
+        )
 
 
-@pytest.fixture(scope="module")
-def create_pt_that_is_not_removed_fn(
-    client: HaxallClient,
-) -> Generator[Callable[[], dict[str, Any]], None, None]:
-    axon_expr = (
-        """diff(null, {pytest, point, his, tz: "New_York", writable, """
-        """kind: "Number"}, {add}).commit"""
+@pytest.mark.order(-1)
+@pytest.mark.parametrize("client", ["json"], indirect=True)
+def test_teardown_proj(client: HaxallClient):
+    clear_test_data(client)
+
+    point_count = client.eval("readCount(point and pytest)").rows[0]["val"].val
+    equip_count = client.eval("readCount(equip and pytest)").rows[0]["val"].val
+    site_count = client.eval("readCount(site and pytest)").rows[0]["val"].val
+
+    if point_count != 0:
+        raise ValueError(
+            f"Unexpected number of pytest points in database. {point_count} != 0"
+        )
+    if equip_count != 0:
+        raise ValueError(
+            f"Unexpected number of pytest equips in database. {equip_count} != 0"
+        )
+    if site_count != 0:
+        raise ValueError(
+            f"Unexpected number of pytest sites in database. {site_count} != 0"
+        )
+
+
+def clear_test_data(client: HaxallClient):
+    client.eval(
+        "readAll((site or point or equip) and pytest).toRecList.map(r=> diff(r, null, {remove})).commit()"
     )
 
-    def _create_pt():
-        response = client.eval(axon_expr)
-        writable_kw_pt_rec = response.rows[0]
-        return writable_kw_pt_rec
 
-    yield _create_pt
-
-
-def test_about_op_with_trailing_uri_slash():
+def test_about_op_with_trailing_uri_slash(URI: str, USERNAME: str, PASSWORD: str):
     client = HaxallClient.open(URI + "/", USERNAME, PASSWORD)
     assert client.about()["vendorName"] == "SkyFoundry"
     client.close()
 
 
-def test_about_op_with_trailing_uri_slash_using_context():
+def test_about_op_with_trailing_uri_slash_using_context(
+    URI: str, USERNAME: str, PASSWORD: str
+):
     with open_haxall_client(URI + "/", USERNAME, PASSWORD) as client:
         assert client.about()["vendorName"] == "SkyFoundry"
 
 
-def test_open_hx_client():
-    uri = "http://localhost:8080/api/demo"
-    username = "su"
-    password = "su"
-
-    with open_haxall_client(uri, username, password) as hc:
+def test_open_hx_client(URI: str, USERNAME: str, PASSWORD: str):
+    with open_haxall_client(URI, USERNAME, PASSWORD) as hc:
         auth_token = hc._auth_token
 
         assert len(auth_token) > 40
-        assert "web-" in auth_token
+        assert "s-" in auth_token
         assert hc.about()["vendorName"] == "SkyFoundry"
 
         auth_token = hc._auth_token
@@ -76,7 +157,7 @@ def test_open_hx_client():
         assert len(pt_grid.rows) == 1
 
     with pytest.raises(HTTPError) as e:
-        HaxallClient(uri, auth_token).about()
+        HaxallClient(URI, auth_token).about()
 
     assert e.value.status == 403
 
@@ -407,28 +488,31 @@ def test_eval(client: HaxallClient):
     assert "mod" in response.rows[0].keys()
 
 
-def test_file_post_using_txt_file(client: HaxallClient):
-    remote_file_uri = "/proj/demo/io/phable-file-test.txt"
+# -----------------------------------------------------------------------------
+# file op tests -- currently ignored until added to Haxall
+# -----------------------------------------------------------------------------
 
-    with open("tests/phable-file-test.txt", "rb") as file:
-        res_data = client.file_post(file, remote_file_uri)
+# def test_file_post_using_txt_file(client: HaxallClient):
+#     remote_file_uri = "/proj/demo/io/phable-file-test.txt"
+#     with open("tests/phable-file-test.txt", "rb") as file:
+#         res_data = client.file_post(file, remote_file_uri)
 
-    assert ".txt" in str(res_data["uri"])
-    assert remote_file_uri.replace(".txt", "") in str(res_data["uri"])
-
-
-def test_file_put_using_txt_file(client: HaxallClient):
-    remote_file_uri = "/proj/demo/io/phable-file-test.txt"
-
-    with open("tests/phable-file-test.txt", "rb") as file:
-        res_data = client.file_put(file, remote_file_uri)
-
-    assert remote_file_uri == str(res_data["uri"])
+#     assert ".txt" in str(res_data["uri"])
+#     assert remote_file_uri.replace(".txt", "") in str(res_data["uri"])
 
 
-def test_file_get_using_txt_file(client: HaxallClient):
-    stream = client.file_get("/proj/demo/io/phable-file-test.txt")
-    data = stream.read()
-    stream.close()
+# def test_file_put_using_txt_file(client: HaxallClient):
+#     remote_file_uri = "/proj/demo/io/phable-file-test.txt"
 
-    assert data == b"Hello World!\n"
+#     with open("tests/phable-file-test.txt", "rb") as file:
+#         res_data = client.file_put(file, remote_file_uri)
+
+#     assert remote_file_uri == str(res_data["uri"])
+
+
+# def test_file_get_using_txt_file(client: HaxallClient):
+#     stream = client.file_get("/proj/demo/io/phable-file-test.txt")
+#     data = stream.read()
+#     stream.close()
+
+#     assert data == b"Hello World!\n"
