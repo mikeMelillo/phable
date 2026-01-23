@@ -31,13 +31,13 @@ class XetoCLI:
         """Initialize a `XetoCLI` instance.
 
         Parameters:
-            xeto_dir:
-                Optional path to a local directory with Xeto libraries.  If provided, CLI commands will
-                be executed from this directory assuming a local Haxall installation is linked.  If `None`,
-                commands will execute via a Docker container called `phable_haxall_cli_run` that is assumed
-                to be running. The `phable_haxall_cli_run` Docker container can be built and started
-                by cloning [phable](https://github.com/rick-jennings/phable) and following the instructions
+            docker_cli:
+                If `True`, CLI commands will execute via a Docker container called `phable_haxall_cli_run`
+                that is assumed to be running. The container can be built and started by cloning
+                [phable](https://github.com/rick-jennings/phable) and following the instructions
                 [here](https://github.com/rick-jennings/phable/blob/main/tests/xeto_cli/README.md).
+                If `False` (default), commands run locally via Haxall's `xeto` CLI, which must
+                be installed and available on the system PATH.
             io_format:
                 Data serialization format for communication with Haxall. Either `json`
                 or `zinc`. Defaults to `zinc`.
