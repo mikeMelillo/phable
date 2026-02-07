@@ -284,11 +284,9 @@ class Grid:
         **Requirements:**
         - Phable's optional Pandas dependency must be installed.
         - `Grid` must have history data (`hisStart` in Grid metadata that is timezone-aware).
-        - Grid column metadata must have a `kind` tag with a value of `Bool`, `Str`, or `Number`.
-        - Grid row value types must match the `kind` defined in Grid column metadata (e.g., `bool` for
-          `Bool`, `str` for `Str`, `Number` for `Number`). `NA` is valid for all kinds.
+        - Grid column metadata must have an `id` of type `Ref`.
+        - Grid row value types must be `Number`, `bool`, `str`, or `NA`.
         - Row timestamps must use the same timezone as `hisStart` in Grid metadata.
-        - `Number` values must have a `unit` that matches the Grid column metadata's `unit` (both can be `None`).
 
         When converting to a long-format DataFrame, history data for one or more points are combined into columns.
         Values are split into typed columns (`val_bool`, `val_str`, `val_num`) to use native DataFrame types for
@@ -329,8 +327,7 @@ class Grid:
             ValueError:
                 If `Grid` does not have `hisStart` in metadata, `hisStart` is not timezone-aware,
                 row timestamps have a different timezone than `hisStart`, columns are missing required `id`
-                metadata of type Ref, `Number` values have units that don't match column metadata, or
-                values are unsupported types.
+                metadata of type Ref, or values are unsupported types.
         """
         import pandas as pd
         import pyarrow as pa
@@ -366,11 +363,9 @@ class Grid:
         **Requirements:**
         - Phable's optional Polars dependency must be installed.
         - `Grid` must have history data (`hisStart` in Grid metadata that is timezone-aware).
-        - Grid column metadata must have a `kind` tag with a value of `Bool`, `Str`, or `Number`.
-        - Grid row value types must match the `kind` defined in Grid column metadata (e.g., `bool` for
-          `Bool`, `str` for `Str`, `Number` for `Number`). `NA` is valid for all kinds.
+        - Grid column metadata must have an `id` of type `Ref`.
+        - Grid row value types must be `Number`, `bool`, `str`, or `NA`.
         - Row timestamps must use the same timezone as `hisStart` in Grid metadata.
-        - `Number` values must have a `unit` that matches the Grid column metadata's `unit` (both can be `None`).
 
         When converting to a long-format DataFrame, history data for one or more points are combined into columns.
         Values are split into typed columns (`val_bool`, `val_str`, `val_num`) to use native DataFrame types for
@@ -411,8 +406,7 @@ class Grid:
             ValueError:
                 If `Grid` does not have `hisStart` in metadata, `hisStart` is not timezone-aware,
                 row timestamps have a different timezone than `hisStart`, columns are missing required `id`
-                metadata of type Ref, `Number` values have units that don't match column metadata, or
-                values are unsupported types.
+                metadata of type Ref, or values are unsupported types.
         """
         import polars as pl  # ty: ignore[unresolved-import]
 
