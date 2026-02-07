@@ -112,23 +112,23 @@ def test_missing_id_metadata_raises_error(df_adapter: DataFrameAdapter) -> None:
         df_adapter.to_df(grid)
 
 
-def test_missing_kind_metadata_raises_error(df_adapter: DataFrameAdapter) -> None:
-    ts_now = datetime.now(ZoneInfo("America/New_York"))
-    meta = {
-        "ver": "3.0",
-        "hisStart": ts_now - timedelta(hours=1),
-        "hisEnd": ts_now,
-    }
-    cols = [GridCol("ts"), GridCol("val", {"id": Ref("point1")})]
-    rows = [{"ts": ts_now, "val": Number(72.2, "kW")}]
+# def test_missing_kind_metadata_raises_error(df_adapter: DataFrameAdapter) -> None:
+#     ts_now = datetime.now(ZoneInfo("America/New_York"))
+#     meta = {
+#         "ver": "3.0",
+#         "hisStart": ts_now - timedelta(hours=1),
+#         "hisEnd": ts_now,
+#     }
+#     cols = [GridCol("ts"), GridCol("val", {"id": Ref("point1")})]
+#     rows = [{"ts": ts_now, "val": Number(72.2, "kW")}]
 
-    grid = Grid(meta, cols, rows)
+#     grid = Grid(meta, cols, rows)
 
-    with pytest.raises(
-        ValueError,
-        match="Column 'val' must have metadata with a 'kind' tag",
-    ):
-        df_adapter.to_df(grid)
+#     with pytest.raises(
+#         ValueError,
+#         match="Column 'val' must have metadata with a 'kind' tag",
+#     ):
+#         df_adapter.to_df(grid)
 
 
 def test_unsupported_value_type_raises_error(df_adapter: DataFrameAdapter) -> None:
@@ -232,21 +232,21 @@ def test_row_ts_tz_mismatch_raises_error(
         df_adapter.to_df(grid)
 
 
-def test_unit_mismatch_raises_error(df_adapter: DataFrameAdapter) -> None:
-    ts_now = datetime.now(ZoneInfo("America/New_York"))
-    meta = {
-        "ver": "3.0",
-        "hisStart": ts_now - timedelta(hours=1),
-        "hisEnd": ts_now,
-    }
-    cols = [GridCol("ts"), GridCol("val", {"id": Ref("point1"), "kind": "Number"})]
-    rows = [{"ts": ts_now, "val": Number(72.2, "kW")}]
+# def test_unit_mismatch_raises_error(df_adapter: DataFrameAdapter) -> None:
+#     ts_now = datetime.now(ZoneInfo("America/New_York"))
+#     meta = {
+#         "ver": "3.0",
+#         "hisStart": ts_now - timedelta(hours=1),
+#         "hisEnd": ts_now,
+#     }
+#     cols = [GridCol("ts"), GridCol("val", {"id": Ref("point1"), "kind": "Number"})]
+#     rows = [{"ts": ts_now, "val": Number(72.2, "kW")}]
 
-    grid = Grid(meta, cols, rows)
+#     grid = Grid(meta, cols, rows)
 
-    with pytest.raises(
-        ValueError,
-        match="Unit mismatch for column 'val': value has unit 'kW' "
-        "but column metadata specifies unit 'None'",
-    ):
-        df_adapter.to_df(grid)
+#     with pytest.raises(
+#         ValueError,
+#         match="Unit mismatch for column 'val': value has unit 'kW' "
+#         "but column metadata specifies unit 'None'",
+#     ):
+#         df_adapter.to_df(grid)

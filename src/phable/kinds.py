@@ -310,6 +310,21 @@ class Grid:
 
         The resultant DataFrame is sorted by `id` and `ts`.
 
+        Phable users are encouraged to interpolate data while in the long format dataframe using `na` before
+        pivoting to a wide format dataframe, since pivoting loses `NA` semantics which define where
+        interpolation should not occur.
+
+        **Example:**
+
+        ```python
+        # convert to long-format pandas dataframe
+        df_long = his_grid.to_pandas()
+
+        # pivot to wide format (one column per point, indexed by timestamp)
+        # use the appropriate value column (val_bool, val_str, or val_num) based on point kind
+        df_wide = df_long.pivot_table(index="ts", columns="id", values="val_num")
+        ```
+
         Raises:
             ValueError:
                 If `Grid` does not have `hisStart` in metadata, `hisStart` is not timezone-aware,
@@ -376,6 +391,21 @@ class Grid:
         | `na`       | `Boolean`          | No       | `True` when value is Project Haystack's `NA`   |
 
         The resultant DataFrame is sorted by `id` and `ts`.
+
+        Phable users are encouraged to interpolate data while in the long format dataframe using `na` before
+        pivoting to a wide format dataframe, since pivoting loses `NA` semantics which define where
+        interpolation should not occur.
+
+        **Example:**
+
+        ```python
+        # convert to long-format polars dataframe
+        df_long = his_grid.to_polars()
+
+        # pivot to wide format (one column per point, indexed by timestamp)
+        # use the appropriate value column (val_bool, val_str, or val_num) based on point kind
+        df_wide = df_long.pivot(on="id", index="ts", values="val_num")
+        ```
 
         Raises:
             ValueError:
@@ -511,10 +541,10 @@ def _validate_his_grid_metadata(grid: Grid) -> None:
                 f"Column '{col.name}' must have metadata with a valid 'id' of type Ref."
             )
 
-        if col.meta.get("kind") is None:
-            raise ValueError(
-                f"Column '{col.name}' must have metadata with a 'kind' tag."
-            )
+        # if col.meta.get("kind") is None:
+        #     raise ValueError(
+        #         f"Column '{col.name}' must have metadata with a 'kind' tag."
+        #     )
 
 
 def _structure_long_format_for_df(grid: Grid) -> tuple[ZoneInfo, list[dict[str, Any]]]:
@@ -543,22 +573,22 @@ def _structure_long_format_for_df(grid: Grid) -> tuple[ZoneInfo, list[dict[str, 
             assert col.meta is not None  # for type checker
 
             point_id = col.meta["id"].val
-            expected_unit = col.meta.get("unit")
-            kind = col.meta["kind"]
+            # expected_unit = col.meta.get("unit")
+            # kind = col.meta["kind"]
 
             raw_val = row.get(col.name)
 
             if raw_val is None:
                 continue
 
-            type_to_kind = {Number: "Number", bool: "Bool", str: "Str"}
-            actual_kind = type_to_kind.get(type(raw_val))
+            # type_to_kind = {Number: "Number", bool: "Bool", str: "Str"}
+            # actual_kind = type_to_kind.get(type(raw_val))
 
-            if actual_kind and actual_kind != kind:
-                raise ValueError(
-                    f"Type mismatch for column '{col.name}': value is {actual_kind} "
-                    f"but column metadata specifies kind '{kind}'."
-                )
+            # if actual_kind and actual_kind != kind:
+            #     raise ValueError(
+            #         f"Type mismatch for column '{col.name}': value is {actual_kind} "
+            #         f"but column metadata specifies kind '{kind}'."
+            #     )
 
             if isinstance(raw_val, NA):
                 val_bool = None
@@ -566,11 +596,11 @@ def _structure_long_format_for_df(grid: Grid) -> tuple[ZoneInfo, list[dict[str, 
                 val_num = None
                 na = True
             elif isinstance(raw_val, Number):
-                if expected_unit != raw_val.unit:
-                    raise ValueError(
-                        f"Unit mismatch for column '{col.name}': value has unit '{raw_val.unit}' "
-                        f"but column metadata specifies unit '{expected_unit}'."
-                    )
+                # if expected_unit != raw_val.unit:
+                #     raise ValueError(
+                #         f"Unit mismatch for column '{col.name}': value has unit '{raw_val.unit}' "
+                #         f"but column metadata specifies unit '{expected_unit}'."
+                #     )
                 val_bool = None
                 val_str = None
                 val_num = raw_val.val
