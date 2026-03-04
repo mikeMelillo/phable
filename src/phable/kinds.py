@@ -423,6 +423,105 @@ class Grid:
 
         return pl.DataFrame(data=data, schema=schema).sort("id", "ts")
 
+    def to_parquet(self, path: str | None = None) -> bytes | None:
+        """Converts time-series `Grid` to Parquet format.
+
+        **Note:** This method is experimental and subject to change.
+
+        Uses pandas DataFrame as an intermediary format. If a file path is provided,
+        writes directly to the file and returns None. Otherwise, returns parquet
+        data as bytes.
+
+        **Requirements:**
+        - Phable's optional Pandas and PyArrow dependencies must be installed.
+        - `Grid` must have history data (`hisStart` in Grid metadata that is timezone-aware).
+        - Grid column metadata must have an `id` of type `Ref`.
+        - Grid row value types must be `Number`, `bool`, `str`, or `NA`.
+        - Row timestamps must use the same timezone as `hisStart` in Grid metadata.
+
+        Parameters:
+            path: Optional file path to write Parquet file. If None, returns bytes.
+
+        Returns:
+            Parquet bytes if path is None, otherwise None.
+
+        Raises:
+            ValueError:
+                If `Grid` does not have `hisStart` in metadata, `hisStart` is not timezone-aware,
+                row timestamps have a different timezone than `hisStart`, columns are missing required `id`
+                metadata of type Ref, or values are unsupported types.
+
+        **Example:**
+
+        ```python
+        # Write to file
+        his_grid.to_parquet("data.parquet")
+
+        # Get as bytes
+        parquet_bytes = his_grid.to_parquet()
+        ```
+        """
+        from pathlib import Path
+
+        df = self.to_pandas()
+
+        if path is None:
+            return df.to_parquet()
+        else:
+            df.to_parquet(Path(path))
+            return None
+
+    @staticmethod
+    def from_parquet(path: str) -> Grid:
+        """Creates a `Grid` from a Parquet file.
+
+        **Note:** This method is experimental and subject to change.
+
+        Reads a Parquet file that was previously created by `to_parquet()`
+        and reconstructs the Grid structure.
+
+        Parameters:
+            path: File path to Parquet file.
+
+        Returns:
+            A Grid object.
+
+        Raises:
+            FileNotFoundError: If file does not exist.
+            ValueError: If file cannot be parsed as valid Parquet or Grid data.
+
+        **Example:**
+
+        ```python
+        grid = Grid.from_parquet("data.parquet")
+        ```
+        """
+        from pathlib import Path
+
+        import pandas as pd
+
+        path = Path(path)
+        if not path.exists():
+            raise FileNotFoundError(f"File not found: {path}")
+
+        df = pd.read_parquet(path)
+
+        # Convert DataFrame back to Grid structure
+        rows = df.to_dict("records")
+        grid_meta = {"ver": "3.0"}
+
+        if hasattr(df, "attrs") and df.attrs:
+            grid_meta.update(df.attrs)
+
+        # Create Grid with inferred columns
+        if rows:
+            col_names = list(rows[0].keys())
+            cols = [GridCol(name) for name in col_names]
+        else:
+            cols = []
+
+        return Grid(meta=grid_meta, cols=cols, rows=rows)
+
 
 @dataclass(frozen=True, slots=True)
 class DateRange:
